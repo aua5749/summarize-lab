@@ -11,12 +11,17 @@ Options:
   -h --help            Show this screen.
   -o --output=<file>   Write output to file instead of stdout.
 """
+from curses.ascii import isalnum
+
 from docopt import docopt
 import nltk
 import sys
 from collections import defaultdict
 from collections.abc import Callable
 from typing import TextIO
+import io
+#import sample.txt
+from collections import Counter
 
 
 def load_document(textfile: TextIO) -> list[str]:
@@ -25,19 +30,25 @@ def load_document(textfile: TextIO) -> list[str]:
     text = nltk.sent_tokenize(' '.join(text))
     return text
 
+with open('sample.txt', 'r', encoding='utf-8') as sample:
+    text = (load_document(sample))
 
 # [TODO] Remove non-word symbols from terms, maybe more?
 def clean_text(text: list[str]) -> list[list[str]]:
     """Transform text into a list of terms for each sentence"""
     sentences: list[list[str]] = []
     for line in text:
+
+
+
+
         sentence = [word.casefold()
-                    for word in nltk.word_tokenize(line)]
+                    for word in nltk.word_tokenize(line) if word.isalnum() is True]
         if len(sentence) > 0:
             sentences.append(sentence)
     return sentences
 
-                
+
 
 # [TODO] Implement Term Frequency calculation for document, term
 def calculate_tf(sentences: list[list[str]]) -> list[dict]:
@@ -45,6 +56,15 @@ def calculate_tf(sentences: list[list[str]]) -> list[dict]:
     Returns a table whose keys are the indices of sentences of the text
     and values are dictionaries of terms and their tf values."""
     matrix: list[dict] = []
+    for sentence in sentences:
+        dict1={}
+        for word in sentence:
+
+            if word not in dict1:
+                dict1[word]=1/len(sentence)
+            else:
+                dict1[word]=dict1[word]+1/len(sentence)
+        matrix.append(dict1)
     return matrix
 
 
@@ -52,7 +72,19 @@ def calculate_tf(sentences: list[list[str]]) -> list[dict]:
 def calculate_idf(sentences: list[list[str]]) -> dict[str, float]:
     """Calculate the Inverse `Document'(Sentence) Frequency of each term.
     Returns a table of terms and their idf values."""
+
     matrix: dict[str, float] = defaultdict(float)
+    main_dict=Counter({})
+    for sentence in sentences:
+        dictionary=Counter({})
+
+        for words in sentence:
+            if words not in dictionary:
+                dictionary[words]=1
+
+        main_dict=main_dict+dictionary
+    for keys in main_dict:
+        matrix[keys]=len(sentences)/main_dict[keys]
     return matrix
 
 
@@ -63,6 +95,17 @@ def score_sentences(tf_matrix: list[dict], idf_matrix: dict[str, float], sentenc
     Returns a table whose keys are the indices of sentences of the text
     and values are the sum of tf-idf scores of each word in the sentence"""
     scores: list[float] = []
+
+    for index,sentence in enumerate(sentences):
+        score_sum = 0
+        for word in sentence:
+
+            score= tf_matrix[index][word]*idf_matrix[word]
+            score_sum=score_sum+score
+        average=score_sum/len(sentence)
+
+        scores.append(average)
+
     return scores
 
 
